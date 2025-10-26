@@ -1,5 +1,5 @@
 module Experiment
-export matrix_integral, evolve, generate_uncertainty, ideal_evolve, online_evolve
+export matrix_integral, evolve, generate_uncertainty, ideal_evolve, flip_bits
 
 using QuadGK
 using Distributions
@@ -11,6 +11,15 @@ function matrix_integral(A::AbstractMatrix, B::AbstractMatrix, lower_limit::Floa
   integrand = s -> exp(A * s) * B
   result, _ = quadgk(integrand, lower_limit, upper_limit)
   return result
+end
+
+function flip_bits(a::Float64, b::Int)
+  bits = bitstring(a)
+  n = lastindex(bits)
+  flipped = String([i > n - b ? (bits[i] == '0' ? '1' : '0') : bits[i] for i in 1:n])
+  flipped_int = parse(UInt64, flipped; base=2)
+  new_a = reinterpret(Float64, flipped_int)
+  return new_a
 end
 
 function generate_uncertainty(σ1::Float64, σ2::Float64, μ::Float64)
@@ -42,39 +51,6 @@ function evolve(A::AbstractMatrix, B::AbstractMatrix, K::AbstractMatrix, H::Inte
       λ21 = λ[3]
       λ22 = λ[4]
       z_fix = z[k]
-    end
-    K_error = [K[1, :][1]*(1+λ11) K[1, :][2]*(1+λ12) K[1, :][3]; K[2, :][1]*(1+λ21) K[2, :][2]*(1+λ22) K[2, :][3]]
-    u[k] = -[dot(K_error[1, :], z[k]);
-         dot(K_error[2, :], z_fix)]
-    z[k+1] = A * z[k] + B * u[k]
-  end
-  return z, u
-end
-
-function online_evolve(A::AbstractMatrix, B::AbstractMatrix, K::AbstractMatrix, H::Integer, z0::Vector{Float64}, u1_0::Float64, u2_0::Float64, σ1::Float64, σ2::Float64, μ::Float64, ideal::Vector{Vector{Float64}}, threshold::Float64)
-  u0 = [u1_0; u2_0]
-  z = Vector{typeof(z0)}(undef, H + 1)
-  u = Vector{typeof(u0)}(undef, H)
-  z[1] = z0
-  u[1] = u0
-  z[2] = A * z[1] + B * u[1]
-  z[2][end-length(u2_0)+1:end, :] .= 0
-  λ21 = nothing
-  λ22 = nothing
-  z_fix = z[2]
-  for k in 2:H
-    λ = generate_uncertainty(σ1, σ2, μ)
-    λ11 = λ[1]
-    λ12 = λ[2]
-    if (k == 2) 
-      λ21 = λ[3]
-      λ22 = λ[4]
-    end
-    if norm(ideal[k] - z[k][1:2]) > threshold
-      λ21 = λ[3]
-      λ22 = λ[4]
-      z_fix = z[k]
-    else
     end
     K_error = [K[1, :][1]*(1+λ11) K[1, :][2]*(1+λ12) K[1, :][3]; K[2, :][1]*(1+λ21) K[2, :][2]*(1+λ22) K[2, :][3]]
     u[k] = -[dot(K_error[1, :], z[k]);

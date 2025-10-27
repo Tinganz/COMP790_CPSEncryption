@@ -22,6 +22,10 @@ function flip_bits(a::Float64, b::Int)
   return new_a
 end
 
+function flip_bits_vec(v::AbstractVector{Float64}, b::Int)
+  return [flip_bits(a, b) for a in v]
+end
+
 function generate_uncertainty(σ1::Float64, σ2::Float64, μ::Float64)
   dist_λ1 = Normal(μ, σ1)
   dist_λ2 = Normal(μ, σ2)
@@ -32,30 +36,17 @@ function generate_uncertainty(σ1::Float64, σ2::Float64, μ::Float64)
   return [λ11 λ12 λ21 λ22]
 end
 
-function evolve(A::AbstractMatrix, B::AbstractMatrix, K::AbstractMatrix, H::Integer, z0::Vector{Float64}, u1_0::Float64, u2_0::Float64, σ1::Float64, σ2::Float64, μ::Float64, n::Integer)
+function evolve(A::AbstractMatrix, B::AbstractMatrix, K::AbstractMatrix, H::Integer, z0::Vector{Float64}, u1_0::Float64, u2_0::Float64, unprotected::Integer)
   u0 = [u1_0; u2_0]
   z = Vector{typeof(z0)}(undef, H + 1)
   u = Vector{typeof(u0)}(undef, H)
   z[1] = z0
   u[1] = u0
-  z[2] = A * z[1] + B * u[1]
+  z[2] = A * flip_bits_vec(z[1], unprotected) + B * flip_bits_vec(u[1], unprotected)
   z[2][end-length(u2_0)+1:end, :] .= 0
-  λ21 = nothing
-  λ22 = nothing
-  z_fix = z[2]
   for k in 2:H
-    λ = generate_uncertainty(σ1, σ2, μ)
-    λ11 = λ[1]
-    λ12 = λ[2]
-    if mod((k-2), n) == 0
-      λ21 = λ[3]
-      λ22 = λ[4]
-      z_fix = z[k]
-    end
-    K_error = [K[1, :][1]*(1+λ11) K[1, :][2]*(1+λ12) K[1, :][3]; K[2, :][1]*(1+λ21) K[2, :][2]*(1+λ22) K[2, :][3]]
-    u[k] = -[dot(K_error[1, :], z[k]);
-         dot(K_error[2, :], z_fix)]
-    z[k+1] = A * z[k] + B * u[k]
+    u[k] = - dot(K, flip_bits_vec(z[k], unprotected));
+    z[k+1] = A * flip_bits_vec(z[k], unprotected) + B * flip_bits_vec(u[k], unprotected)
   end
   return z, u
 end

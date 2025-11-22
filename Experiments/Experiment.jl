@@ -1,5 +1,5 @@
 module Experiment
-export matrix_integral, evolve, generate_uncertainty, ideal_evolve, flip_bits
+export matrix_integral, evolve, generate_uncertainty, ideal_evolve, flip_bits_vec
 
 using QuadGK
 using Distributions
@@ -36,27 +36,24 @@ function generate_uncertainty(σ1::Float64, σ2::Float64, μ::Float64)
   return [λ11 λ12 λ21 λ22]
 end
 
-function evolve(A::AbstractMatrix, B::AbstractMatrix, K::AbstractMatrix, H::Integer, z0::Vector{Float64}, u1_0::Float64, u2_0::Float64, unprotected::Integer)
-  u0 = [u1_0; u2_0]
+function evolve(A::AbstractMatrix, B::AbstractMatrix, K::AbstractMatrix, H::Integer, z0::Vector{Float64}, u0::Float64, unprotected::Integer)
   z = Vector{typeof(z0)}(undef, H + 1)
-  u = Vector{typeof(u0)}(undef, H)
+  u = Vector{typeof([u0])}(undef, H)
   z[1] = z0
-  u[1] = u0
+  u[1] = [u0]
   z[2] = A * flip_bits_vec(z[1], unprotected) + B * flip_bits_vec(u[1], unprotected)
-  z[2][end-length(u2_0)+1:end, :] .= 0
   for k in 2:H
-    u[k] = - dot(K, flip_bits_vec(z[k], unprotected));
+    u[k] = [- dot(K, flip_bits_vec(z[k], unprotected))]
     z[k+1] = A * flip_bits_vec(z[k], unprotected) + B * flip_bits_vec(u[k], unprotected)
   end
   return z, u
 end
 
 function ideal_evolve(A::AbstractMatrix, B::AbstractMatrix, K::AbstractMatrix, H::Integer, x0::Vector{Float64}, u0::Float64)
-  u0 = [u0]
   x = Vector{typeof(x0)}(undef, H + 1)
-  u = Vector{typeof(u0)}(undef, H + 1)
+  u = Vector{typeof([u0])}(undef, H + 1)
   x[1] = x0
-  u[1] = u0
+  u[1] = [u0]
   for k in 1:H
     x[k+1] = A * x[k] + B * u[k]
     u[k+1] = - K * x[k+1]

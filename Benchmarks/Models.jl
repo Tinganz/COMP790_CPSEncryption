@@ -1,4 +1,4 @@
-module Benchmarks
+module Models
 
 export benchmarks
 export delay_lqr, pole_place, augment
@@ -7,7 +7,7 @@ using ControlSystemsBase
 using LinearAlgebra
 
 # Resistor-capacitor network
-sys_rcn = let
+const sys_rcn = let
 	r_1 = 100000
 	r_2 = 500000
 	r_3 = 200000
@@ -25,7 +25,7 @@ sys_rcn = let
 end
 
 # F1-tenth car
-sys_f1t = let 
+const sys_f1t = let 
     v = 6.5
     L = 0.3302
     d = 1.5
@@ -38,7 +38,7 @@ sys_f1t = let
 end
 
 # DC motor
-sys_dcm = let
+const sys_dcm = let
     A = [-10 1; -0.02 -2]
     B = [0; 2]
     C = [1 0]
@@ -48,7 +48,7 @@ sys_dcm = let
 end
 
 # Car suspension system
-sys_css = let
+const sys_css = let
     A = [0. 1 0 0; -8 -4 8 4; 0 0 0 1; 80 40 -160 -60]
     B = [0; 80; 20; -1120]
     C = [1 0 0 0]
@@ -58,7 +58,7 @@ sys_css = let
 end
 
 # Electronic wedge brake
-sys_ewb = let
+const sys_ewb = let
     A = [0 1; 8.3951e3 0]
     B = [0; 4.0451]
     C = [7.9920e3 0]
@@ -68,7 +68,7 @@ sys_ewb = let
 end
 
 # Cruise control 1
-sys_cc1 = let
+const sys_cc1 = let
     A = -0.05
     B = 0.01
     C = 1
@@ -78,7 +78,7 @@ sys_cc1 = let
 end
 
 # Cruise control 2
-sys_cc2 = let
+const sys_cc2 = let
     A = [0 1 0; 0 0 1; -6.0476 -5.2856 -0.238]
     B = [0; 0; 2.4767]
     C = [1 0 0]
@@ -87,7 +87,7 @@ sys_cc2 = let
     ss(A, B, C, D)
 end
 
-sys_mpc = ss(tf([3, 1],[1, 0.6, 1]))
+const sys_mpc = ss(tf([3, 1],[1, 0.6, 1]))
 
 # TODOs: figure out why EWB doesn't work, for ControlTimingSafety package.
 benchmarks = Dict([

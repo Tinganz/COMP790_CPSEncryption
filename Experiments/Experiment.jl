@@ -1,7 +1,8 @@
 module Experiment
-export matrix_integral, evolve, generate_uncertainty, ideal_evolve, flip_bits_vec
+export matrix_integral, evolve, generate_uncertainty, ideal_evolve, flip_bits_vec, compute_rmse_list, plot_rmse_vs_bits
 
 using QuadGK
+using Plots
 using Distributions
 using ControlSystemsBase
 using LinearAlgebra
@@ -60,4 +61,40 @@ function ideal_evolve(A::AbstractMatrix, B::AbstractMatrix, K::AbstractMatrix, H
   end
   return x, u
 end
+
+function compute_rmse_list(z_ideal, all_trajectories_z, period, period_c, H, K)
+  dev_trajs = [[(z_ideal[1 + (k-1)*floor(Int, period/period_c)] .- all_trajectories_z[i][k][1:2]) for k in 1:H] for i in 1:K]
+  dev1_trajs = [[dev[1] for dev in dev_traj] for dev_traj in dev_trajs]
+  rmse_list = [sqrt(mean((dev1_traj).^2)) for dev1_traj in dev1_trajs]
+  return rmse_list
+end
+
+
+function plot_rmse_vs_bits(rmse_list, M, N; filename="rmse_vs_bits.png")
+    # Check matching lengths
+    if length(rmse_list) != (N - M + 1)
+        error("rmse_list length does not match range M:N")
+    end
+
+    x_vals = M:N
+    y_vals = rmse_list
+
+    # Create plot
+    p = plot(
+        x_vals,
+        y_vals,
+        xlabel = "Number of Exposed Bits",
+        ylabel = "RMSE",
+        title = "RMSE vs Exposed Bits",
+        linewidth = 3,
+        marker = :circle,
+        markersize = 6,
+        legend = false,
+    )
+
+    # Save plot
+    savefig(p, filename)
+    println("Plot saved to: $filename")
+end
+
 end
